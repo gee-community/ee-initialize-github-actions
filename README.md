@@ -74,7 +74,7 @@ unformatted to avoid JSON decoding errors.
 I'll not get into the [details of writing a workflow](https://docs.github.com/en/actions/writing-workflows/about-workflows).
 You can [see my full example](https://github.com/gee-community/ee-initialize-github-actions/blob/main/.github/workflows/ee-test-with-oauth2.yml),
 but **the important part to note is that I'm setting an environmental variable from the credentials secret
-in the step that runs my Earth Engine script** (ee-test-with-oauth2.py).
+in the step that runs my Earth Engine script** ([ee-test-with-oauth2.py](https://github.com/gee-community/ee-initialize-github-actions/blob/main/ee-test-with-oauth2.py)).
 
 ```yml
 - name: Run Earth Engine Script
@@ -86,12 +86,13 @@ in the step that runs my Earth Engine script** (ee-test-with-oauth2.py).
 
 ## 4. Initialize to Earth Engine in your test file
 
-In the test file that makes Earth Engine requests, **construct Oauth2 credentials
+In the test file ([ee-test-with-oauth2.py](https://github.com/gee-community/ee-initialize-github-actions/blob/main/ee-test-with-oauth2.py)
+that makes Earth Engine requests, **construct Oauth2 credentials
 from the credentials info in the secret**. The credentials info is fetched from
 the environment variable we set previously, and then arranged as arguments
 to `google.oauth2.credentials.Credentials` whose result is given to `ee.Initialize()`.
 
-```
+```python
 import ee
 import json
 import os
