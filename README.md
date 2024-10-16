@@ -24,7 +24,7 @@ micromamba install conda-forge::earthengine-api
 command. Use `--force` to ensure that the auth flow is triggered and new credentials are
 written. If a browser is detected, it'll have you go online to complete authentication;
 follow the prompts. If a browser is not available, see
-[alternatives]([url](https://developers.google.com/earth-engine/guides/auth#authentication_details)).
+[alternatives](https://developers.google.com/earth-engine/guides/auth#authentication_details).
 
 ```shell
 earthengine authenticate --force
@@ -86,7 +86,7 @@ in the step that runs my Earth Engine script** ([ee-test-with-oauth2.py](https:/
 
 ## 4. Initialize to Earth Engine in your test file
 
-In the test file ([ee-test-with-oauth2.py](https://github.com/gee-community/ee-initialize-github-actions/blob/main/ee-test-with-oauth2.py)
+In the test file ([ee-test-with-oauth2.py](https://github.com/gee-community/ee-initialize-github-actions/blob/main/ee-test-with-oauth2.py))
 that makes Earth Engine requests, **construct Oauth2 credentials
 from the credentials info in the secret**. The credentials info is fetched from
 the environment variable we set previously, and then arranged as arguments
@@ -116,11 +116,11 @@ print(ee.String("Greetings from the Earth Engine servers!").getInfo())
 ## 5. Test the script
 
 In this case, I'm just **manually triggering the workflow from the "Actions" tab,
-clicking on the workflow and running the workflow**. 
+clicking on the workflow, and running the workflow**. 
 
 ![image](https://github.com/user-attachments/assets/cd324247-f592-401c-afdd-e5cc5e2d1382)
 
-As you can see the scripts runs successfully and we get a nice message from the
+As you can see, the scripts runs successfully and we get a nice message from the
 Earth Engine servers 😁
 
 ![image](https://github.com/user-attachments/assets/280082ef-7caa-419e-8fa2-795bc1e888d1)
