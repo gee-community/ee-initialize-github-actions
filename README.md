@@ -37,10 +37,18 @@ private, don't share it or people can use your Earth Engine resources.
 Google Cloud projects. You'll need to specify a project when you initialize to Earth Engine services.
 One way to do that is to include a default project in your credentials file. Here we add one using the
 `earthengine set_project` command. Be sure to edit the project ID to one that you want associated
-with running tests in your GitHub repo. 
+with running tests in your GitHub repo.
+
+To check you existing projects ids you can use the following command
 
 ```shell
-earthengine authenticate --force <YOUR-PROJECT-ID>
+gcloud projects list
+```
+
+To include a default project in your credentials file, use the following command:
+
+```shell
+earthengine set_project <YOUR-PROJECT-ID>
 ```
 
 The given project will now appear in the credentials file just created.
@@ -125,9 +133,29 @@ Earth Engine servers 😁
 
 ![image](https://github.com/user-attachments/assets/280082ef-7caa-419e-8fa2-795bc1e888d1)
 
+### Possible Errors
 
+While running the workflow, you may encounter the following errors:
 
+#### Error 1: Google Earth Engine API Not Enabled
 
+```shell
+ee.ee_exception.EEException: Google Earth Engine API has not been used in project projectid before or it is disabled. Enable it by visiting https://console.developers.google.com/apis/api/earthengine.googleapis.com/overview?project=projectid then retry. If you enabled this API recently, wait a few minutes for the action to propagate to our systems and retry.
+```
 
+- ![Enable Google Earth Engine API](https://github.com/thekester/ee-initialize-github-actions/blob/google-oauth2-credentials/enablegoogleeartengineapi.png)
 
+To resolve this, **enable the Google Earth Engine API** by visiting the following link: [Enable Google Earth Engine API](https://console.developers.google.com/apis/api/earthengine.googleapis.com/overview?project=projectid). If you enabled the API recently, please wait a few minutes for the changes to propagate before retrying.
+
+- ![Click Enable Button](https://github.com/thekester/ee-initialize-github-actions/blob/google-oauth2-credentials/buttonenablegoogleearthengineapi.png)
+
+#### Error 2: API Disabled for Specific Project
+
+```shell
+ee.ee_exception.EEException: Google Earth Engine API has not been used in project gitactions-idfederation before or it is disabled. Enable it by visiting https://console.developers.google.com/apis/api/earthengine.googleapis.com/overview?project=gitactions-idfederation then retry. If you enabled this API recently, wait a few minutes for the action to propagate to our systems and retry.
+```
+
+- ![Project Not Registered](https://github.com/thekester/ee-initialize-github-actions/blob/google-oauth2-credentials/projectnotregistered.png)
+
+Again, you'll need to **enable the Google Earth Engine API** for the specified project by visiting the following link: [Enable API for gitactions-idfederation](https://console.developers.google.com/apis/api/earthengine.googleapis.com/overview?project=gitactions-idfederation). Please wait a few minutes if the API was recently enabled.
 
