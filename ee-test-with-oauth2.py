@@ -11,6 +11,7 @@ credentials = google.oauth2.credentials.Credentials(
     client_secret=stored["client_secret"],
     refresh_token=stored["refresh_token"],
     quota_project_id=stored["project"],
+    scopes=["https://www.googleapis.com/auth/earthengine"]
 )
 
 ee.Initialize(credentials=credentials)
