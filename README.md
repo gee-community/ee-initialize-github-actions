@@ -52,8 +52,11 @@ assets with the service account email.
 4. Create two secrets:
    - **Name:** `EARTHENGINE_SERVICE_ACCOUNT`
      - **Value:** The entire contents of the JSON key file (paste as-is)
-   - **Name:** `EARTHENGINE_PROJECT`
+   - **Name:** `EARTHENGINE_PROJECT` (optional, recommended for clarity)
      - **Value:** Your Google Cloud project ID
+     
+Note: For service accounts, the project ID is extracted from the credentials, but setting 
+`EARTHENGINE_PROJECT` explicitly is recommended for clarity.
 
 ### 5. Update Your Workflow
 
@@ -105,7 +108,7 @@ One way to do that is to include a default project in your credentials file. Her
 `earthengine set_project` command. Be sure to edit the project ID to one that you want associated
 with running tests in your GitHub repo.
 
-To check you existing projects ids you can use the following command
+To check your existing projects ids you can use the following command
 
 ```shell
 gcloud projects list
@@ -141,8 +144,12 @@ Create two secrets:
 1. **Name:** `EARTHENGINE_TOKEN`
    - **Value:** Copy the entire credentials file content (keep it as single-line JSON)
 
-2. **Name:** `EARTHENGINE_PROJECT`
+2. **Name:** `EARTHENGINE_PROJECT` (required if not in token)
    - **Value:** Your Google Cloud project ID (e.g., "my-ee-project")
+
+Note: `EARTHENGINE_PROJECT` is required for token-based authentication. If your credentials file
+already contains a "project" field, the script will use that value. However, setting the environment
+variable explicitly is recommended.
 
 > We advise minifying your JSON into a single line string before storing it in a GitHub Secret. When a
 > GitHub Secret is used in a GitHub Actions workflow, each line of the secret is masked in log output.
@@ -222,10 +229,23 @@ def init_ee_from_token():
         credential_folder_path.mkdir(parents=True, exist_ok=True)
         credential_file_path = credential_folder_path / "credentials"
         credential_file_path.write_text(ee_token)
+        credential_file_path.chmod(0o600)  # Set secure permissions
         
+        # Get project ID from environment or token
         project_id = os.environ.get("EARTHENGINE_PROJECT")
         if project_id is None:
-            raise ValueError("EARTHENGINE_PROJECT environment variable required")
+            # Try to extract from token
+            try:
+                token_data = json.loads(ee_token)
+                project_id = token_data.get("project") or token_data.get("project_id")
+            except (json.JSONDecodeError, AttributeError):
+                pass
+        
+        if project_id is None:
+            raise ValueError(
+                "Project ID cannot be detected. "
+                "Please set EARTHENGINE_PROJECT or include 'project' in credentials"
+            )
         
         ee.Initialize(project=project_id, http_transport=httplib2.Http())
         return True
