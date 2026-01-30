@@ -1,19 +1,68 @@
 import ee
 import json
 import os
-import google.oauth2.credentials
+import re
+import httplib2
+from pathlib import Path
 
-stored = json.loads(os.getenv("EARTHENGINE_TOKEN"))
-credentials = google.oauth2.credentials.Credentials(
-    None,
-    token_uri="https://oauth2.googleapis.com/token",
-    client_id=stored["client_id"],
-    client_secret=stored["client_secret"],
-    refresh_token=stored["refresh_token"],
-    quota_project_id=stored["project"],
-    scopes=["https://www.googleapis.com/auth/earthengine"]
-)
+def init_ee_from_service_account():
+    """Initialize Earth Engine using a service account (preferred for CI/CD)."""
+    if "EARTHENGINE_SERVICE_ACCOUNT" in os.environ:
+        private_key = os.environ["EARTHENGINE_SERVICE_ACCOUNT"]
+        
+        # Connect to GEE using a ServiceAccountCredentials object
+        ee_user = json.loads(private_key)["client_email"]
+        credentials = ee.ServiceAccountCredentials(ee_user, key_data=private_key)
+        ee.Initialize(
+            credentials=credentials,
+            project=credentials.project_id,
+            http_transport=httplib2.Http()
+        )
+        return True
+    return False
 
-ee.Initialize(credentials=credentials)
+def init_ee_from_token():
+    """Initialize Earth Engine using a token (fallback method)."""
+    if "EARTHENGINE_TOKEN" in os.environ:
+        ee_token = os.environ["EARTHENGINE_TOKEN"]
+        
+        # Remove quotes if present (readthedocs workaround)
+        pattern = re.compile(r"^'[^']*'$")
+        ee_token = ee_token[1:-1] if pattern.match(ee_token) else ee_token
+        
+        # Write the token to the credentials file
+        credential_folder_path = Path.home() / ".config" / "earthengine"
+        credential_folder_path.mkdir(parents=True, exist_ok=True)
+        credential_file_path = credential_folder_path / "credentials"
+        credential_file_path.write_text(ee_token)
+        
+        # Get project ID
+        project_id = os.environ.get("EARTHENGINE_PROJECT")
+        if project_id is None:
+            # Try to extract from token
+            try:
+                token_data = json.loads(ee_token)
+                project_id = token_data.get("project") or token_data.get("project_id")
+            except:
+                pass
+        
+        if project_id is None:
+            raise ValueError(
+                "Project name cannot be detected. "
+                "Please set the EARTHENGINE_PROJECT environment variable."
+            )
+        
+        ee.Initialize(project=project_id, http_transport=httplib2.Http())
+        return True
+    return False
+
+# Try service account authentication first (preferred), then token-based
+if not init_ee_from_service_account():
+    if not init_ee_from_token():
+        raise ValueError(
+            "No valid authentication method found. "
+            "Please set either EARTHENGINE_SERVICE_ACCOUNT or EARTHENGINE_TOKEN "
+            "environment variable."
+        )
 
 print(ee.String("Greetings from the Earth Engine servers!").getInfo())

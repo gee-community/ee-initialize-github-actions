@@ -1,13 +1,79 @@
 # ee-initialize-github-actions
-_Instructions for initializing to Earth Engine in Python scripts run with GitHub Actions. There
-are multiple ways to do this, I'd like to add several, but for now it demonstrates constructing
-credentials from `google.oauth2.credentials.Credentials`_
+_Instructions for initializing to Earth Engine in Python scripts run with GitHub Actions._
 
 So you want to test Earth Engine in your GitHub Actions? Great idea! To do it, you'll need
-to authenticate and initialize to the Earth Engine service. This repo describes how to
-generate a credentials file, save those credentials as a GitHub Secret, construct
-oauth2 credentials and pass them to `ee.Initialize()`. A basic workflow file and Earth
-Engine script are provided, but they are super minimal and not the focus of this demo.
+to authenticate and initialize to the Earth Engine service. This repo demonstrates two modern
+authentication methods:
+
+1. **Service Account Authentication** (Recommended for CI/CD) - Uses a Google Cloud service account
+2. **Token-based Authentication** (Alternative) - Uses your personal Earth Engine credentials
+
+Both methods are demonstrated with a basic workflow file and Earth Engine script.
+
+## Method 1: Service Account Authentication (Recommended)
+
+This is the **recommended approach for CI/CD workflows** as it's more secure and doesn't rely
+on personal credentials.
+
+### 1. Create a Service Account in Google Cloud
+
+1. Go to the [Google Cloud Console](https://console.cloud.google.com/)
+2. Select your Earth Engine enabled project
+3. Navigate to **IAM & Admin > Service Accounts**
+4. Click **Create Service Account**
+5. Give it a name (e.g., "github-actions-ee") and click **Create**
+6. Grant the service account appropriate permissions (at minimum, it needs Earth Engine access)
+7. Click **Done**
+
+### 2. Create a Service Account Key
+
+1. Click on the service account you just created
+2. Go to the **Keys** tab
+3. Click **Add Key > Create new key**
+4. Select **JSON** format and click **Create**
+5. A JSON file will be downloaded - keep this secure!
+
+### 3. Register the Service Account with Earth Engine
+
+You need to register this service account with Earth Engine:
+
+```shell
+earthengine set_account <service-account-email>@<project-id>.iam.gserviceaccount.com
+```
+
+Or register it through the [Earth Engine Code Editor](https://code.earthengine.google.com/) by sharing
+assets with the service account email.
+
+### 4. Add Secrets to GitHub
+
+1. Go to your GitHub repository
+2. Navigate to **Settings > Secrets and variables > Actions**
+3. Click **New repository secret**
+4. Create two secrets:
+   - **Name:** `EARTHENGINE_SERVICE_ACCOUNT`
+     - **Value:** The entire contents of the JSON key file (paste as-is)
+   - **Name:** `EARTHENGINE_PROJECT`
+     - **Value:** Your Google Cloud project ID
+
+### 5. Update Your Workflow
+
+Your workflow should set these environment variables:
+
+```yml
+- name: Run Earth Engine Script
+  env:
+    EARTHENGINE_SERVICE_ACCOUNT: ${{ secrets.EARTHENGINE_SERVICE_ACCOUNT }}
+    EARTHENGINE_PROJECT: ${{ secrets.EARTHENGINE_PROJECT }}
+  run: |
+    python ee-test-with-oauth2.py
+```
+
+---
+
+## Method 2: Token-based Authentication (Alternative)
+
+This method uses your personal Earth Engine credentials. Note that modern Earth Engine credentials
+no longer include OAuth2 client credentials.
 
 ## 1. Create Earth Engine credentials
 
@@ -56,70 +122,128 @@ The given project will now appear in the credentials file just created.
 ## 2. Add the credentials information as a GitHub secret
 
 **Find your credentials file (`~/.config/earthengine/credentials`) and open it with a text editor.**
-If should be single-line JSON formatted like this:
+The modern format should look like this (single-line JSON):
 
 ```json
-{"client_id": "value", "client_secret": "value", "refresh_token": "value", "project": "value"}
+{"refresh_token": "value", "project": "value", ...}
 ```
 
-**Go to the GitHub repo where you're running GitHub Actions and create a new
-[repository secret](https://docs.github.com/en/codespaces/managing-codespaces-for-your-organization/managing-development-environment-secrets-for-your-repository-or-organization).**
+Note: The credentials no longer contain `client_id` and `client_secret` - this is expected!
+
+**Go to the GitHub repo where you're running GitHub Actions and create repository secrets.**
 On the top tabs click "Actions", on the left TOC click "Secrets and variables", select "Actions",
 and then "New repository secret"
 
 ![image](https://github.com/user-attachments/assets/65dbd501-fbbd-43dd-b9e0-44d886d7eddb)
 
-You'll be prompted to name the secret; I suggest `EARTHENGINE_TOKEN`. Copy the credentials information
-from your text editor into the secret input text box. It's important that the text be unaltered and
-unformatted to avoid JSON decoding errors.
+Create two secrets:
+
+1. **Name:** `EARTHENGINE_TOKEN`
+   - **Value:** Copy the entire credentials file content (keep it as single-line JSON)
+
+2. **Name:** `EARTHENGINE_PROJECT`
+   - **Value:** Your Google Cloud project ID (e.g., "my-ee-project")
 
 > We advise minifying your JSON into a single line string before storing it in a GitHub Secret. When a
 > GitHub Secret is used in a GitHub Actions workflow, each line of the secret is masked in log output.
 > This can lead to aggressive sanitization of benign characters like curly braces ({}) and brackets ([]).
 
-## 3. Write your workflow and add the EARTHENGINE_TOKEN secret as an environmental varible
+---
+
+## 3. Write your workflow and add the secrets as environment variables
 
 I'll not get into the [details of writing a workflow](https://docs.github.com/en/actions/writing-workflows/about-workflows).
 You can [see my full example](https://github.com/gee-community/ee-initialize-github-actions/blob/main/.github/workflows/ee-test-with-oauth2.yml),
-but **the important part to note is that I'm setting an environmental variable from the credentials secret
-in the step that runs my Earth Engine script** ([ee-test-with-oauth2.py](https://github.com/gee-community/ee-initialize-github-actions/blob/main/ee-test-with-oauth2.py)).
+but **the important part is setting the environment variables in the step that runs your Earth Engine script**
+([ee-test-with-oauth2.py](https://github.com/gee-community/ee-initialize-github-actions/blob/main/ee-test-with-oauth2.py)).
+
+**For Service Account Authentication:**
+
+```yml
+- name: Run Earth Engine Script
+  env:
+    EARTHENGINE_SERVICE_ACCOUNT: ${{ secrets.EARTHENGINE_SERVICE_ACCOUNT }}
+    EARTHENGINE_PROJECT: ${{ secrets.EARTHENGINE_PROJECT }}
+  run: |
+    python ee-test-with-oauth2.py
+```
+
+**For Token-based Authentication:**
 
 ```yml
 - name: Run Earth Engine Script
   env:
     EARTHENGINE_TOKEN: ${{ secrets.EARTHENGINE_TOKEN }}
+    EARTHENGINE_PROJECT: ${{ secrets.EARTHENGINE_PROJECT }}
   run: |
     python ee-test-with-oauth2.py
 ```
 
+The script automatically detects which authentication method to use based on available environment variables.
+
 ## 4. Initialize to Earth Engine in your test file
 
-In the test file ([ee-test-with-oauth2.py](https://github.com/gee-community/ee-initialize-github-actions/blob/main/ee-test-with-oauth2.py))
-that makes Earth Engine requests, **construct Oauth2 credentials
-from the credentials info in the secret**. The credentials info is fetched from
-the environment variable we set previously, and then arranged as arguments
-to `google.oauth2.credentials.Credentials` whose result is given to `ee.Initialize()`.
+In the test file ([ee-test-with-oauth2.py](https://github.com/gee-community/ee-initialize-github-actions/blob/main/ee-test-with-oauth2.py)),
+the script **automatically detects and uses the appropriate authentication method**:
+
+1. **Service Account** (if `EARTHENGINE_SERVICE_ACCOUNT` is set) - preferred method
+2. **Token-based** (if `EARTHENGINE_TOKEN` is set) - fallback method
+
+The modern implementation no longer requires manual OAuth2 credential construction:
 
 ```python
 import ee
 import json
 import os
-import google.oauth2.credentials
+import re
+import httplib2
+from pathlib import Path
 
-stored = json.loads(os.getenv("EARTHENGINE_TOKEN"))
-credentials = google.oauth2.credentials.Credentials(
-    None,
-    token_uri="https://oauth2.googleapis.com/token",
-    client_id=stored["client_id"],
-    client_secret=stored["client_secret"],
-    refresh_token=stored["refresh_token"],
-    quota_project_id=stored["project"],
-)
+def init_ee_from_service_account():
+    """Initialize Earth Engine using a service account (preferred for CI/CD)."""
+    if "EARTHENGINE_SERVICE_ACCOUNT" in os.environ:
+        private_key = os.environ["EARTHENGINE_SERVICE_ACCOUNT"]
+        ee_user = json.loads(private_key)["client_email"]
+        credentials = ee.ServiceAccountCredentials(ee_user, key_data=private_key)
+        ee.Initialize(
+            credentials=credentials,
+            project=credentials.project_id,
+            http_transport=httplib2.Http()
+        )
+        return True
+    return False
 
-ee.Initialize(credentials=credentials)
+def init_ee_from_token():
+    """Initialize Earth Engine using a token (fallback method)."""
+    if "EARTHENGINE_TOKEN" in os.environ:
+        ee_token = os.environ["EARTHENGINE_TOKEN"]
+        # Write token to credentials file
+        credential_folder_path = Path.home() / ".config" / "earthengine"
+        credential_folder_path.mkdir(parents=True, exist_ok=True)
+        credential_file_path = credential_folder_path / "credentials"
+        credential_file_path.write_text(ee_token)
+        
+        project_id = os.environ.get("EARTHENGINE_PROJECT")
+        if project_id is None:
+            raise ValueError("EARTHENGINE_PROJECT environment variable required")
+        
+        ee.Initialize(project=project_id, http_transport=httplib2.Http())
+        return True
+    return False
+
+# Try service account first, then token-based
+if not init_ee_from_service_account():
+    if not init_ee_from_token():
+        raise ValueError("No valid authentication method found")
 
 print(ee.String("Greetings from the Earth Engine servers!").getInfo())
 ```
+
+Key changes from the old approach:
+- No longer requires `client_id` and `client_secret` 
+- Supports modern service account authentication
+- Works with new credential file format
+- Automatic method detection
 
 ## 5. Test the script
 
